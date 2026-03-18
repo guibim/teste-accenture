@@ -1,0 +1,230 @@
+{
+	"info": {
+		"name": "DemoQA Book Store API",
+		"description": "Collection baseada no desafio técnico de aluguel de livros.",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+	},
+	"item": [
+		{
+			"name": "Passo 1: Criar Usuário",
+			"event": [
+				{
+					"listen": "prerequest",
+					"script": {
+						"exec": [
+							"// Simula o faker para gerar username dinâmico",
+							"const randomUser = 'user_' + Math.random().toString(36).substring(7);",
+							"pm.collectionVariables.set('dynamicUsername', randomUser);",
+							"pm.collectionVariables.set('userPassword', 'Password@123!');"
+						],
+						"type": "text/javascript"
+					}
+				},
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"pm.test('Status code é 201', function () {",
+							"    pm.response.to.have.status(201);",
+							"});",
+							"",
+							"const jsonData = pm.response.json();",
+							"pm.collectionVariables.set('userId', jsonData.userID);"
+						],
+						"type": "text/javascript"
+					}
+				}
+			],
+			"request": {
+				"method": "POST",
+				"header": [],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n    \"userName\": \"{{dynamicUsername}}\",\n    \"password\": \"{{userPassword}}\"\n}",
+					"options": { "raw": { "language": "json" } }
+				},
+				"url": {
+					"raw": "{{baseUrl}}/Account/v1/User",
+					"host": ["{{baseUrl}}"],
+					"path": ["Account", "v1", "User"]
+				}
+			}
+		},
+		{
+			"name": "Passo 2: Gerar Token",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"pm.test('Token gerado com sucesso', function () {",
+							"    pm.expect(pm.response.json().status).to.eql('Success');",
+							"});",
+							"",
+							"const jsonData = pm.response.json();",
+							"pm.collectionVariables.set('accessToken', jsonData.token);"
+						],
+						"type": "text/javascript"
+					}
+				}
+			],
+			"request": {
+				"method": "POST",
+				"header": [],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n    \"userName\": \"{{dynamicUsername}}\",\n    \"password\": \"{{userPassword}}\"\n}",
+					"options": { "raw": { "language": "json" } }
+				},
+				"url": {
+					"raw": "{{baseUrl}}/Account/v1/GenerateToken",
+					"host": ["{{baseUrl}}"],
+					"path": ["Account", "v1", "GenerateToken"]
+				}
+			}
+		},
+		{
+			"name": "Passo 3: Confirmar Autorização",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"pm.test('Usuário autorizado', function () {",
+							"    pm.expect(pm.response.json()).to.be.true;",
+							"});"
+						],
+						"type": "text/javascript"
+					}
+				}
+			],
+			"request": {
+				"method": "POST",
+				"header": [],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n    \"userName\": \"{{dynamicUsername}}\",\n    \"password\": \"{{userPassword}}\"\n}",
+					"options": { "raw": { "language": "json" } }
+				},
+				"url": {
+					"raw": "{{baseUrl}}/Account/v1/Authorized",
+					"host": ["{{baseUrl}}"],
+					"path": ["Account", "v1", "Authorized"]
+				}
+			}
+		},
+		{
+			"name": "Passo 4: Listar e Escolher Livros",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"pm.test('Lista de livros retornada', function () {",
+							"    pm.response.to.have.status(200);",
+							"});",
+							"",
+							"const books = pm.response.json().books;",
+							"// Seleciona 2 livros aleatórios (lógica do faker.helpers.arrayElements)",
+							"const shuffled = books.sort(() => 0.5 - Math.random());",
+							"pm.collectionVariables.set('firstBookIsbn', shuffled[0].isbn);",
+							"pm.collectionVariables.set('secondBookIsbn', shuffled[1].isbn);"
+						],
+						"type": "text/javascript"
+					}
+				}
+			],
+			"request": {
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": "{{baseUrl}}/BookStore/v1/Books",
+					"host": ["{{baseUrl}}"],
+					"path": ["BookStore", "v1", "Books"]
+				}
+			}
+		},
+		{
+			"name": "Passo 5: Alugar Livros",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"pm.test('Livros alugados (201)', function () {",
+							"    pm.response.to.have.status(201);",
+							"    pm.expect(pm.response.json().books).to.have.lengthOf(2);",
+							"});"
+						],
+						"type": "text/javascript"
+					}
+				}
+			],
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Authorization",
+						"value": "Bearer {{accessToken}}",
+						"type": "text"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n    \"userId\": \"{{userId}}\",\n    \"collectionOfIsbns\": [\n        { \"isbn\": \"{{firstBookIsbn}}\" },\n        { \"isbn\": \"{{secondBookIsbn}}\" }\n    ]\n}",
+					"options": { "raw": { "language": "json" } }
+				},
+				"url": {
+					"raw": "{{baseUrl}}/BookStore/v1/Books",
+					"host": ["{{baseUrl}}"],
+					"path": ["BookStore", "v1", "Books"]
+				}
+			}
+		},
+		{
+			"name": "Passo 6: Detalhes do Usuário",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"const jsonData = pm.response.json();",
+							"pm.test('Livros estão no perfil', function () {",
+							"    pm.expect(jsonData.username).to.eql(pm.collectionVariables.get('dynamicUsername'));",
+							"    pm.expect(jsonData.books).to.have.lengthOf(2);",
+							"    const isbns = jsonData.books.map(b => b.isbn);",
+							"    pm.expect(isbns).to.include(pm.collectionVariables.get('firstBookIsbn'));",
+							"    pm.expect(isbns).to.include(pm.collectionVariables.get('secondBookIsbn'));",
+							"});"
+						],
+						"type": "text/javascript"
+					}
+				}
+			],
+			"request": {
+				"method": "GET",
+				"header": [
+					{
+						"key": "Authorization",
+						"value": "Bearer {{accessToken}}",
+						"type": "text"
+					}
+				],
+				"url": {
+					"raw": "{{baseUrl}}/Account/v1/User/{{userId}}",
+					"host": ["{{baseUrl}}"],
+					"path": ["Account", "v1", "User", "{{userId}}"]
+				}
+			}
+		}
+	],
+	"variable": [
+		{ "key": "baseUrl", "value": "https://demoqa.com" },
+		{ "key": "dynamicUsername", "value": "" },
+		{ "key": "userPassword", "value": "" },
+		{ "key": "userId", "value": "" },
+		{ "key": "accessToken", "value": "" },
+		{ "key": "firstBookIsbn", "value": "" },
+		{ "key": "secondBookIsbn", "value": "" }
+	]
+}
